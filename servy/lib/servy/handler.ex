@@ -1,10 +1,13 @@
 defmodule Servy.Handler do
+  require Logger
+
   def handle(request) do
     request
     |> parse
     |> rewrite_path
     |> log
     |> route
+    |> emojify
     |> track
     |> format_response
   end
@@ -28,9 +31,16 @@ defmodule Servy.Handler do
     %{ conv | path: "/wildthings" }
   end
 
+  def rewrite_path(%{path: "/bears?id=" <> id} = conv) do
+    %{ conv | path: "/bears/#{id}" }
+  end
+
   def rewrite_path(conv), do: conv
 
-  def log(conv), do: IO.inspect conv
+  def log(conv) do
+    Logger.info inspect(conv)
+    conv
+  end
 
   def route(%{ method: "GET", path: "/wildthings" } = conv) do
       %{ conv | status: 200, response_body: "Bears, Lions, Tigers, iPhones, iPads, Apple Watches" }
@@ -40,16 +50,59 @@ defmodule Servy.Handler do
     %{ conv | status: 200, response_body: "Grizzley, Teddy, Smokey, Paddington, Bear from the Revenant" }
   end
 
+  def route(%{ method: "GET", path: "/bears/new" } = conv) do
+    Path.expand("../../pages", __DIR__)
+    |> Path.join("form.html")
+    |> File.read
+    |> handle_file(conv)
+  end
+
   def route(%{ method: "GET", path: "/bears/" <> id } = conv) do
     %{ conv | status: 200, response_body: "Bear #{id}" }
+  end
+
+  def route(%{ method: "DELETE", path: "/bears/" <> id } = conv) do
+    %{ conv | status: 200, response_body: "Bear #{id} successfully deleted." }
+  end
+
+  def route(%{ method: "GET", path: "/about" } = conv) do
+    Path.expand("../../pages/", __DIR__)
+    |> Path.join("about.html")
+    |> File.read
+    |> handle_file(conv)
+  end
+
+  def route(%{ method: "GET", path: "/" <> page } = conv) do
+    Path.expand("../../pages/", __DIR__)
+    |> Path.join(page <> ".html")
+    |> File.read
+    |> handle_file(conv)
+  end
+
+  def handle_file({:ok, content}, conv) do
+    %{ conv | status: 200, response_body: content }
+  end
+
+  def handle_file({:error, :enoent}, conv) do
+    %{ conv | status: 404, response_body: "File not found." }
+  end
+
+  def handle_file({:error, reason}, conv) do
+    %{ conv | status: 500, response_body: "File Error: #{reason}" }
   end
 
   def route(%{ path: path } = conv) do
     %{ conv | status: 404, response_body: "No #{path} here. :(" }
   end
 
+  def emojify(%{ status: 200, response_body: response_body } = conv) do
+    %{ conv | response_body: "💩📞👍\n#{response_body}\n🏭🐸😈" }
+  end
+
+  def emojify(conv), do: conv
+
   def track(%{status: 404, path: path} = conv) do
-    IO.puts "Warning: #{path} is on the loose! >:]\n"
+    Logger.warn "Warning: #{path} is on the loose! >:]\n"
     conv
   end
 
@@ -132,6 +185,30 @@ IO.puts response
 
 
 request = """
+GET /bears?id=1 HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+response = Servy.Handler.handle(request)
+
+IO.puts response
+
+request = """
+DELETE /bears/1 HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+response = Servy.Handler.handle(request)
+
+IO.puts response
+
+request = """
 GET /bigfoot HTTP/1.1
 Host: example.com
 User-Agent: ExampleBrowser/1.0
@@ -139,6 +216,57 @@ Accept: */*
 
 """
 
+response = Servy.Handler.handle(request)
+
+IO.puts response
+
+
+request = """
+GET /about HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+response = Servy.Handler.handle(request)
+
+IO.puts response
+
+
+request = """
+GET /contact HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+response = Servy.Handler.handle(request)
+
+IO.puts response
+
+
+request = """
+GET /faq HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+response = Servy.Handler.handle(request)
+
+IO.puts response
+
+
+request = """
+GET /bears/new HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
 
 response = Servy.Handler.handle(request)
 
