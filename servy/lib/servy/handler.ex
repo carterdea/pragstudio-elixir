@@ -3,6 +3,7 @@ defmodule Servy.Handler do
 
   import Servy.Plugins, only: [rewrite_path: 1, log: 1, emojify: 1, track: 1, ]
   import Servy.FileHandler
+  import Servy.Parser
 
   alias Servy.Conv
 
@@ -22,83 +23,61 @@ defmodule Servy.Handler do
     |> format_response
   end
 
-  @doc "Parses request into different parts."
-  def parse(request) do
-    [method, path, _] =
-      request
-      |> String.split("\n")
-      |> List.first
-      |> String.split(" ")
-
-    %Conv{
-      method: method,
-      path: path
-    }
-  end
-
-  def route(%{ method: "GET", path: "/wildthings" } = conv) do
+  def route(%Conv{ method: "GET", path: "/wildthings" } = conv) do
       %{ conv | status: 200, response_body: "Bears, Lions, Tigers, iPhones, iPads, Apple Watches" }
   end
 
-  def route(%{ method: "GET", path: "/bears" } = conv) do
+  def route(%Conv{ method: "GET", path: "/bears" } = conv) do
     %{ conv | status: 200, response_body: "Grizzley, Teddy, Smokey, Paddington, Bear from the Revenant" }
   end
 
-  def route(%{ method: "GET", path: "/bears/new" } = conv) do
+  def route(%Conv{ method: "GET", path: "/bears/new" } = conv) do
     @pages_path
     |> Path.join("form.html")
     |> File.read
     |> handle_file(conv)
   end
 
-  def route(%{ method: "GET", path: "/bears/" <> id } = conv) do
+  def route(%Conv{ method: "GET", path: "/bears/" <> id } = conv) do
     %{ conv | status: 200, response_body: "Bear #{id}" }
   end
 
-  def route(%{ method: "DELETE", path: "/bears/" <> id } = conv) do
+  def route(%Conv{method: "POST", path: "/bears"} = conv) do
+    %{ conv | status: 201,
+    response_body: "Created a #{conv.params["type"]} bear named #{conv.params["name"]}." }
+  end
+
+  def route(%Conv{ method: "DELETE", path: "/bears/" <> id } = conv) do
     %{ conv | status: 200, response_body: "Bear #{id} successfully deleted." }
   end
 
-  def route(%{ method: "GET", path: "/about" } = conv) do
+  def route(%Conv{ method: "GET", path: "/about" } = conv) do
     @pages_path
     |> Path.join("about.html")
     |> File.read
     |> handle_file(conv)
   end
 
-  def route(%{ method: "GET", path: "/" <> page } = conv) do
+  def route(%Conv{ method: "GET", path: "/" <> page } = conv) do
     @pages_path
     |> Path.join(page <> ".html")
     |> File.read
     |> handle_file(conv)
   end
 
-  def route(%{ path: path } = conv) do
+  def route(%Conv{ path: path } = conv) do
     %{ conv | status: 404, response_body: "No #{path} here. :(" }
   end
 
-  def format_response(conv) do
+  def format_response(%Conv{} = conv) do
     """
-    HTTP/1.1 #{conv.status} #{status_reason(conv.status)}
+    HTTP/1.1 #{Conv.full_status(conv)}
     Content-Type: text/html
     Content-Length: #{String.length(conv.response_body)}
 
     #{conv.response_body}
     """
   end
-
-  # defp == private in Ruby
-  defp status_reason(code) do
-    %{
-      200 => "OK",
-      201 => "Created",
-      401 => "Unauthorized",
-      403 => "Forbidden",
-      404 => "Not Found",
-      500 => "Internal Server Error"
-    }[code]
-  end
-
 end
 
 request = """
@@ -235,6 +214,23 @@ Host: example.com
 User-Agent: ExampleBrowser/1.0
 Accept: */*
 
+"""
+
+response = Servy.Handler.handle(request)
+
+IO.puts response
+
+
+
+request = """
+POST /bears HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 21
+
+name=Baloo&type=Brown
 """
 
 response = Servy.Handler.handle(request)
