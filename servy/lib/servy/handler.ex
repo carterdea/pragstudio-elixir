@@ -221,7 +221,6 @@ response = Servy.Handler.handle(request)
 IO.puts response
 
 
-
 request = """
 POST /bears HTTP/1.1
 Host: example.com
@@ -236,3 +235,4 @@ name=Baloo&type=Brown
 response = Servy.Handler.handle(request)
 
 IO.puts response
+
