@@ -1,6 +1,8 @@
 # Servy
 
-**TODO: Add description**
+**A simple web server from scratch in Elixir. Used as a playground to learn Elixir.**
+
+Servy lets you see a list of bears.
 
 ## Installation
 
@@ -15,7 +17,8 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/servy](https://hexdocs.pm/servy).
+## Requirements
+
+## Methods
+
 
